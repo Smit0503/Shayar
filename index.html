@@ -73,17 +73,17 @@
         const password = passwordInput().value;
         auth.createUserWithEmailAndPassword(email, password).catch(alert);
     }
-
+window.signup = signup;
     function login() {
         const email = emailInput().value;
         const password = passwordInput().value;
         auth.signInWithEmailAndPassword(email, password).catch(alert);
     }
-
+window.login = login;
     function logout() {
         auth.signOut();
     }
-
+window.signout = signout;
     function emailInput() { return document.getElementById('email'); }
     function passwordInput() { return document.getElementById('password'); }
 
