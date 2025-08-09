@@ -3,31 +3,133 @@
 <head>
     <meta charset="UTF-8">
     <title>My Poems</title>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js"></script>
     <style>
-        body { font-family: Georgia, serif; max-width: 800px; margin: auto; padding: 20px; background: #faf3e0; }
+        body { font-family: Georgia, serif; background: #faf3e0; padding: 20px; max-width: 800px; margin: auto; }
         h1 { text-align: center; }
-        .poem { margin-bottom: 30px; padding: 15px; background: white; border-radius: 10px; }
-        .poem-title { font-weight: bold; font-size: 1.2em; }
-        .poem-text { white-space: pre-wrap; }
+        .poem { background: white; padding: 15px; margin-bottom: 20px; border-radius: 10px; }
+        .poem-title { font-weight: bold; font-size: 1.2em; margin-bottom: 5px; }
+        textarea, input { width: 100%; padding: 8px; margin: 5px 0; }
+        button { padding: 10px; margin-top: 5px; cursor: pointer; }
     </style>
 </head>
 <body>
-    <h1>My Poems</h1>
 
-    <div class="poem">
-        <div class="poem-title">Sunrise</div>
-        <div class="poem-text">
-            The sun peeks over hills so high,  
-            Painting gold across the sky.
-        </div>
-    </div>
+<h1>My Poems</h1>
 
-    <div class="poem">
-        <div class="poem-title">Rain</div>
-        <div class="poem-text">
-            Gentle drops upon my skin,  
-            A thousand songs all rushing in.
-        </div>
-    </div>
+<div id="loginDiv">
+    <h3>Login</h3>
+    <input id="email" placeholder="Email">
+    <input id="password" placeholder="Password" type="password">
+    <button onclick="login()">Login</button>
+    <button onclick="signup()">Sign Up</button>
+</div>
+
+<div id="poemEditor" style="display:none;">
+    <h3>Add / Edit Poem</h3>
+    <input id="title" placeholder="Poem Title">
+    <textarea id="content" rows="4" placeholder="Write your poem..."></textarea>
+    <button onclick="savePoem()">Save Poem</button>
+    <button onclick="logout()">Logout</button>
+</div>
+
+<div id="poemsList"></div>
+
+<script>
+    // Your Firebase Config
+    const firebaseConfig = {
+        apiKey: "YOUR_API_KEY",
+        authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+        projectId: "YOUR_PROJECT_ID"
+    };
+
+    // Init Firebase
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    let editingId = null;
+
+    // Auth State
+    auth.onAuthStateChanged(user => {
+        if (user) {
+            document.getElementById('loginDiv').style.display = 'none';
+            document.getElementById('poemEditor').style.display = 'block';
+            loadPoems();
+        } else {
+            document.getElementById('loginDiv').style.display = 'block';
+            document.getElementById('poemEditor').style.display = 'none';
+        }
+    });
+
+    function signup() {
+        const email = emailInput().value;
+        const password = passwordInput().value;
+        auth.createUserWithEmailAndPassword(email, password).catch(alert);
+    }
+
+    function login() {
+        const email = emailInput().value;
+        const password = passwordInput().value;
+        auth.signInWithEmailAndPassword(email, password).catch(alert);
+    }
+
+    function logout() {
+        auth.signOut();
+    }
+
+    function emailInput() { return document.getElementById('email'); }
+    function passwordInput() { return document.getElementById('password'); }
+
+    function savePoem() {
+        const title = document.getElementById('title').value;
+        const content = document.getElementById('content').value;
+
+        if (!title || !content) {
+            alert("Please fill in all fields.");
+            return;
+        }
+
+        if (editingId) {
+            db.collection("poems").doc(editingId).update({ title, content });
+            editingId = null;
+        } else {
+            db.collection("poems").add({ title, content, created: Date.now() });
+        }
+
+        document.getElementById('title').value = '';
+        document.getElementById('content').value = '';
+    }
+
+    function loadPoems() {
+        db.collection("poems").orderBy("created", "desc").onSnapshot(snapshot => {
+            const poemsDiv = document.getElementById('poemsList');
+            poemsDiv.innerHTML = '';
+            snapshot.forEach(doc => {
+                const poem = doc.data();
+                poemsDiv.innerHTML += `
+                    <div class="poem">
+                        <div class="poem-title">${poem.title}</div>
+                        <div class="poem-text">${poem.content.replace(/\n/g, '<br>')}</div>
+                        <button onclick="editPoem('${doc.id}', '${poem.title}', \`${poem.content}\`)">Edit</button>
+                        <button onclick="deletePoem('${doc.id}')">Delete</button>
+                    </div>
+                `;
+            });
+        });
+    }
+
+    function editPoem(id, title, content) {
+        document.getElementById('title').value = title;
+        document.getElementById('content').value = content;
+        editingId = id;
+    }
+
+    function deletePoem(id) {
+        db.collection("poems").doc(id).delete();
+    }
+</script>
 </body>
 </html>
