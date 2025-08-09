@@ -1,165 +1,134 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
-<title>My Poems</title>
-<style>
-    body { font-family: Georgia, serif; background: #faf3e0; padding: 20px; max-width: 800px; margin: auto; }
-    h1 { text-align: center; }
-    .poem { background: white; padding: 15px; margin-bottom: 20px; border-radius: 10px; }
-    .poem-title { font-weight: bold; font-size: 1.2em; margin-bottom: 5px; }
-    textarea, input { width: 100%; padding: 8px; margin: 5px 0; }
-    button { padding: 10px; margin-top: 5px; cursor: pointer; }
-</style>
+  <meta charset="UTF-8">
+  <title>Shayar</title>
 </head>
 <body>
+  <h1>📜 My Shayari</h1>
 
-<h1>My Poems</h1>
+  <!-- Auth Section -->
+  <input type="email" id="email" placeholder="Email">
+  <input type="password" id="password" placeholder="Password">
+  <button onclick="signup()">Sign Up</button>
+  <button onclick="login()">Login</button>
+  <button onclick="signout()">Sign Out</button>
 
-<div id="loginDiv">
-    <h3>Login / Sign Up</h3>
-    <input id="email" placeholder="Email">
-    <input id="password" placeholder="Password" type="password">
-    <button id="loginBtn">Login</button>
-    <button id="signupBtn">Sign Up</button>
-</div>
+  <hr>
 
-<div id="poemEditor" style="display:none;">
-    <h3>Add / Edit Poem</h3>
-    <input id="title" placeholder="Poem Title">
-    <textarea id="content" rows="4" placeholder="Write your poem..."></textarea>
-    <button id="saveBtn">Save Poem</button>
-    <button id="logoutBtn">Logout</button>
-</div>
+  <!-- Poem Section -->
+  <textarea id="poemText" placeholder="Write your poem here..."></textarea>
+  <button onclick="savePoem()">Save Poem</button>
 
-<div id="poemsList"></div>
+  <h2>My Poems</h2>
+  <ul id="poemsList"></ul>
 
-<script type="module">
-  // Import Firebase modules
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-app.js";
-  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } 
-    from "https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js";
-  import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, orderBy, query, serverTimestamp } 
-    from "https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js";
+  <script type="module">
+    // Firebase Imports
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } 
+      from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
+    import { getFirestore, collection, addDoc, getDocs, query, where } 
+      from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
 
-  // Your Firebase Config
-  const firebaseConfig = {
-    apiKey: "AIzaSyAitTeXucaql6jlp5K8OWFqioDc7v2wi48",
-    authDomain: "notes-f5ef8.firebaseapp.com",
-    projectId: "notes-f5ef8",
-    storageBucket: "notes-f5ef8.appspot.com",
-    messagingSenderId: "89059717516",
-    appId: "1:89059717516:web:9687b741abc3a65816a6a9",
-    measurementId: "G-9RYE98FCN5"
-  };
+    // Your Firebase Config
+    const firebaseConfig = {
+      apiKey: "AIzaSyAitTeXucaql6jlp5K8OWFqioDc7v2wi48",
+      authDomain: "notes-f5ef8.firebaseapp.com",
+      projectId: "notes-f5ef8",
+      storageBucket: "notes-f5ef8.appspot.com",
+      messagingSenderId: "89059717516",
+      appId: "1:89059717516:web:9687b741abc3a65816a6a9",
+      measurementId: "G-9RYE98FCN5"
+    };
 
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const db = getFirestore(app);
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
 
-  let editingId = null;
-
-  // DOM elements
-  const loginDiv = document.getElementById('loginDiv');
-  const poemEditor = document.getElementById('poemEditor');
-  const poemsList = document.getElementById('poemsList');
-  const emailInput = document.getElementById('email');
-  const passwordInput = document.getElementById('password');
-  const titleInput = document.getElementById('title');
-  const contentInput = document.getElementById('content');
-
-  // Auth State
-  onAuthStateChanged(auth, user => {
-    if (user) {
-      loginDiv.style.display = 'none';
-      poemEditor.style.display = 'block';
-      loadPoems();
-    } else {
-      loginDiv.style.display = 'block';
-      poemEditor.style.display = 'none';
-      poemsList.innerHTML = '';
-    }
-  });
-
-  // Event Listeners
-  document.getElementById('signupBtn').addEventListener('click', async () => {
-    try {
-      await createUserWithEmailAndPassword(auth, emailInput.value, passwordInput.value);
-      emailInput.value = '';
-      passwordInput.value = '';
-    } catch (err) {
-      alert(err.message);
-    }
-  });
-
-  document.getElementById('loginBtn').addEventListener('click', async () => {
-    try {
-      await signInWithEmailAndPassword(auth, emailInput.value, passwordInput.value);
-      emailInput.value = '';
-      passwordInput.value = '';
-    } catch (err) {
-      alert(err.message);
-    }
-  });
-
-  document.getElementById('logoutBtn').addEventListener('click', async () => {
-    await signOut(auth);
-  });
-
-  document.getElementById('saveBtn').addEventListener('click', async () => {
-    const title = titleInput.value.trim();
-    const content = contentInput.value.trim();
-    if (!title || !content) {
-      alert("Please fill in all fields.");
-      return;
-    }
-
-    try {
-      if (editingId) {
-        await updateDoc(doc(db, "poems", editingId), { title, content });
-        editingId = null;
-      } else {
-        await addDoc(collection(db, "poems"), { title, content, created: serverTimestamp() });
+    // Signup
+    async function signup() {
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      try {
+        await createUserWithEmailAndPassword(auth, email, password);
+        alert("Signed up successfully!");
+      } catch (error) {
+        alert(error.message);
       }
-      titleInput.value = '';
-      contentInput.value = '';
-    } catch (err) {
-      alert(err.message);
     }
-  });
 
-  // Load poems
-  function loadPoems() {
-    const q = query(collection(db, "poems"), orderBy("created", "desc"));
-    onSnapshot(q, snapshot => {
-      poemsList.innerHTML = '';
-      snapshot.forEach(docSnap => {
-        const poem = docSnap.data();
-        poemsList.innerHTML += `
-          <div class="poem">
-            <div class="poem-title">${poem.title}</div>
-            <div class="poem-text">${poem.content.replace(/\n/g, '<br>')}</div>
-            <button onclick="editPoem('${docSnap.id}', \`${poem.title}\`, \`${poem.content}\`)">Edit</button>
-            <button onclick="deletePoem('${docSnap.id}')">Delete</button>
-          </div>
-        `;
+    // Login
+    async function login() {
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      try {
+        await signInWithEmailAndPassword(auth, email, password);
+        alert("Logged in!");
+      } catch (error) {
+        alert(error.message);
+      }
+    }
+
+    // Sign Out
+    async function signout() {
+      await signOut(auth);
+      alert("Signed out");
+      document.getElementById('poemsList').innerHTML = '';
+    }
+
+    // Save Poem
+    async function savePoem() {
+      const text = document.getElementById('poemText').value;
+      const user = auth.currentUser;
+      if (!user) {
+        alert("Please log in first!");
+        return;
+      }
+      try {
+        await addDoc(collection(db, "poems"), {
+          uid: user.uid,
+          text: text,
+          date: new Date()
+        });
+        document.getElementById('poemText').value = '';
+        loadPoems();
+      } catch (error) {
+        alert(error.message);
+      }
+    }
+
+    // Load Poems for Current User
+    async function loadPoems() {
+      const user = auth.currentUser;
+      if (!user) return;
+      const poemsRef = collection(db, "poems");
+      const q = query(poemsRef, where("uid", "==", user.uid));
+      const querySnapshot = await getDocs(q);
+      const list = document.getElementById('poemsList');
+      list.innerHTML = '';
+      querySnapshot.forEach(doc => {
+        const li = document.createElement('li');
+        li.textContent = doc.data().text;
+        list.appendChild(li);
       });
+    }
+
+    // Auth State Listener
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        loadPoems();
+      } else {
+        document.getElementById('poemsList').innerHTML = '';
+      }
     });
-  }
 
-  // Expose edit/delete to global scope for inline buttons
-  window.editPoem = (id, title, content) => {
-    titleInput.value = title;
-    contentInput.value = content;
-    editingId = id;
-  };
-
-  window.deletePoem = async (id) => {
-    await deleteDoc(doc(db, "poems", id));
-  };
-
-</script>
-
+    // Expose to HTML
+    window.signup = signup;
+    window.login = login;
+    window.signout = signout;
+    window.savePoem = savePoem;
+  </script>
 </body>
 </html>
