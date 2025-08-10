@@ -1,56 +1,31 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
   <title>Login</title>
-  <style>
-    body { font-family: Arial, sans-serif; background: #f4f4f4; padding: 20px; max-width: 400px; margin: auto; }
-    h2 { text-align: center; }
-    input { width: 100%; padding: 10px; margin: 5px 0; }
-    button { width: 100%; padding: 10px; margin-top: 10px; cursor: pointer; }
-  </style>
 </head>
 <body>
   <h2>Login</h2>
-  <input type="email" id="email" placeholder="Email">
-  <input type="password" id="password" placeholder="Password">
+  <input type="email" id="email" placeholder="Email"><br>
+  <input type="password" id="password" placeholder="Password"><br>
   <button id="loginBtn">Login</button>
-  <button onclick="window.location.href='signup.html'">Sign Up</button>
+  <p>Don't have an account? <a href="signup.html">Sign Up</a></p>
 
- <script type="module">
-import { auth } from "./firebase-config.js";
-import { signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+  <script type="module">
+    import { auth } from './firebase-config.js';
+    import { signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
 
-document.getElementById("loginForm").addEventListener("submit", async (e) => {
-    e.preventDefault();
+    document.getElementById("loginBtn").addEventListener("click", async () => {
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
 
-    const email = document.getElementById("email").value.trim();
-    const password = document.getElementById("password").value.trim();
-
-    if (!email || !password) {
-        alert("Please fill in both fields.");
-        return;
-    }
-
-    try {
+      try {
         await signInWithEmailAndPassword(auth, email, password);
+        alert("Login successful!");
         window.location.href = "home.html";
-    } catch (error) {
-        let message;
-        switch (error.code) {
-            case "auth/user-not-found":
-                message = "No account found with this email.";
-                break;
-            case "auth/wrong-password":
-                message = "Incorrect password.";
-                break;
-            default:
-                message = "Login failed. Please try again.";
-        }
-        alert(message);
-    }
-});
-</script>
-
+      } catch (error) {
+        alert(error.message);
+      }
+    });
+  </script>
 </body>
 </html>
