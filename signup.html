@@ -2,29 +2,41 @@
 <html>
 <head>
   <title>Sign Up</title>
+  <meta charset="UTF-8">
 </head>
 <body>
   <h2>Sign Up</h2>
-  <input type="email" id="email" placeholder="Email"><br>
-  <input type="password" id="password" placeholder="Password"><br>
+  <input type="email" id="email" placeholder="Email" required><br>
+  <input type="password" id="password" placeholder="Password" required><br>
   <button id="signupBtn">Sign Up</button>
   <p>Already have an account? <a href="index.html">Login</a></p>
 
+  <!-- Load script AFTER HTML so DOM elements exist -->
   <script type="module">
     import { auth } from './firebase-config.js';
     import { createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
 
-    document.getElementById("signupBtn").addEventListener("click", async () => {
-      const email = document.getElementById("email").value;
-      const password = document.getElementById("password").value;
+    // Ensure DOM is ready before attaching listeners
+    document.addEventListener("DOMContentLoaded", () => {
+      const signupBtn = document.getElementById("signupBtn");
+      
+      signupBtn.addEventListener("click", async () => {
+        const email = document.getElementById("email").value.trim();
+        const password = document.getElementById("password").value.trim();
 
-      try {
-        await createUserWithEmailAndPassword(auth, email, password);
-        alert("Account created! Redirecting to home...");
-        window.location.href = "home.html";
-      } catch (error) {
-        alert(error.message);
-      }
+        if (!email || !password) {
+          alert("Please fill in both fields.");
+          return;
+        }
+
+        try {
+          await createUserWithEmailAndPassword(auth, email, password);
+          alert("Account created! Redirecting to home...");
+          window.location.href = "home.html";
+        } catch (error) {
+          alert(error.message);
+        }
+      });
     });
   </script>
 </body>
