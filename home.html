@@ -1,71 +1,44 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
-<title>My Poems</title>
-<style>
-    body { font-family: Georgia, serif; background: #faf3e0; padding: 20px; max-width: 800px; margin: auto; }
-    h1 { text-align: center; }
-    .poem { background: white; padding: 15px; margin-bottom: 20px; border-radius: 10px; }
-    .poem-title { font-weight: bold; font-size: 1.2em; margin-bottom: 5px; }
-    textarea, input { width: 100%; padding: 8px; margin: 5px 0; }
-    button { padding: 10px; margin-top: 5px; cursor: pointer; }
-</style>
+  <title>Home</title>
 </head>
 <body>
+  <h2>Welcome</h2>
+  <button id="logoutBtn">Logout</button>
+  <div id="poemsList"></div>
 
-<h1>My Poems</h1>
+  <script type="module">
+    import { auth, db } from './firebase-config.js';
+    import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+    import { collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
-<!-- Poem Editor -->
-<div id="poemEditor">
-    <h3>Add / Edit Poem</h3>
-    <input id="title" placeholder="Poem Title">
-    <textarea id="content" rows="4" placeholder="Write your poem..."></textarea>
-    <button id="saveBtn">Save Poem</button>
-    <button id="logoutBtn">Logout</button>
-</div>
-
-<!-- Poems List -->
-<div id="poemsList"></div>
-
-<script type="module">
-import { auth, db } from "./firebase-config.js";
-import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
-import { collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
-
-onAuthStateChanged(auth, async (user) => {
-    if (!user) {
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
         window.location.href = "index.html";
         return;
-    }
-    loadPoems(user.uid);
-});
+      }
 
-async function loadPoems(uid) {
-    const poemsRef = collection(db, "poems");
-    const q = query(
-    collection(db, "poems"),
-    where("userId", "==", auth.currentUser.uid)
-);
+      document.body.insertAdjacentHTML('afterbegin', `<p>Logged in as: ${user.email}</p>`);
 
-    const querySnapshot = await getDocs(q);
+      // Fetch poems belonging to this user
+      const poemsRef = collection(db, "poems");
+      const q = query(poemsRef, where("userId", "==", user.uid));
+      const snapshot = await getDocs(q);
 
-    const poemsContainer = document.getElementById("poemsContainer");
-    poemsContainer.innerHTML = "";
-
-    querySnapshot.forEach(doc => {
-        const poem = doc.data();
-        const div = document.createElement("div");
-        div.innerHTML = `<h3>${poem.title}</h3><p>${poem.content}</p>`;
-        poemsContainer.appendChild(div);
+      const listDiv = document.getElementById("poemsList");
+      listDiv.innerHTML = "";
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        listDiv.innerHTML += `<p><strong>${data.title}</strong>: ${data.content}</p>`;
+      });
     });
-}
 
-document.getElementById("logoutBtn").addEventListener("click", async () => {
-    await signOut(auth);
-    window.location.href = "index.html";
-});
-</script>
-
+    document.getElementById("logoutBtn").addEventListener("click", () => {
+      signOut(auth).then(() => {
+        window.location.href = "index.html";
+      });
+    });
+  </script>
 </body>
 </html>
