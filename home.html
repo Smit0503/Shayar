@@ -29,39 +29,22 @@
 <div id="poemsList"></div>
 
 <script type="module">
-  // Firebase imports
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-app.js";
-  import { getAuth, signOut, onAuthStateChanged } 
-    from "https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js";
-  import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, orderBy, query, serverTimestamp } 
-    from "https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js";
-
-  // Firebase Config
-  const firebaseConfig = {
-    apiKey: "AIzaSyAitTeXucaql6jlp5K8OWFqioDc7v2wi48",
-    authDomain: "notes-f5ef8.firebaseapp.com",
-    projectId: "notes-f5ef8",
-    storageBucket: "notes-f5ef8.appspot.com",
-    messagingSenderId: "89059717516",
-    appId: "1:89059717516:web:9687b741abc3a65816a6a9",
-    measurementId: "G-9RYE98FCN5"
-  };
-
-  // Init Firebase
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const db = getFirestore(app);
+  // Import Firebase from config file
+  import { auth, db } from './firebase-config.js';
+  import { signOut, onAuthStateChanged } 
+    from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+  import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, orderBy, query, serverTimestamp } 
+    from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
   let editingId = null;
-
   const titleInput = document.getElementById('title');
   const contentInput = document.getElementById('content');
   const poemsList = document.getElementById('poemsList');
 
-  // Redirect if not logged in
+  // Redirect to login if not authenticated
   onAuthStateChanged(auth, user => {
     if (!user) {
-      window.location.href = 'login.html';
+      window.location.href = 'index.html';
     } else {
       loadPoems();
     }
@@ -72,7 +55,7 @@
     await signOut(auth);
   });
 
-  // Save / Update poem
+  // Save / Update Poem
   document.getElementById('saveBtn').addEventListener('click', async () => {
     const title = titleInput.value.trim();
     const content = contentInput.value.trim();
@@ -95,7 +78,7 @@
     }
   });
 
-  // Load poems from Firestore
+  // Load Poems
   function loadPoems() {
     const q = query(collection(db, "poems"), orderBy("created", "desc"));
     onSnapshot(q, snapshot => {
@@ -114,7 +97,7 @@
     });
   }
 
-  // Global helpers for edit & delete
+  // Global edit/delete functions
   window.editPoem = (id, title, content) => {
     titleInput.value = title;
     contentInput.value = content;
