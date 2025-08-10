@@ -29,84 +29,38 @@
 <div id="poemsList"></div>
 
 <script type="module">
-  // Import Firebase from config file
-  import { auth, db } from './firebase-config.js';
-  import { signOut, onAuthStateChanged } 
-    from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
-  import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, orderBy, query, serverTimestamp } 
-    from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+import { auth, db } from "./firebase-config.js";
+import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+import { collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
-  let editingId = null;
-  const titleInput = document.getElementById('title');
-  const contentInput = document.getElementById('content');
-  const poemsList = document.getElementById('poemsList');
-
-  // Redirect to login if not authenticated
-  onAuthStateChanged(auth, user => {
+onAuthStateChanged(auth, async (user) => {
     if (!user) {
-      window.location.href = 'index.html';
-    } else {
-      loadPoems();
+        window.location.href = "index.html";
+        return;
     }
-  });
+    loadPoems(user.uid);
+});
 
-  // Logout
-  document.getElementById('logoutBtn').addEventListener('click', async () => {
-    await signOut(auth);
-  });
+async function loadPoems(uid) {
+    const poemsRef = collection(db, "poems");
+    const q = query(poemsRef, where("userId", "==", uid));
+    const querySnapshot = await getDocs(q);
 
-  // Save / Update Poem
-  document.getElementById('saveBtn').addEventListener('click', async () => {
-    const title = titleInput.value.trim();
-    const content = contentInput.value.trim();
-    if (!title || !content) {
-      alert("Please fill in all fields.");
-      return;
-    }
+    const poemsContainer = document.getElementById("poemsContainer");
+    poemsContainer.innerHTML = "";
 
-    try {
-      if (editingId) {
-        await updateDoc(doc(db, "poems", editingId), { title, content });
-        editingId = null;
-      } else {
-        await addDoc(collection(db, "poems"), { title, content, created: serverTimestamp() });
-      }
-      titleInput.value = '';
-      contentInput.value = '';
-    } catch (err) {
-      alert(err.message);
-    }
-  });
-
-  // Load Poems
-  function loadPoems() {
-    const q = query(collection(db, "poems"), orderBy("created", "desc"));
-    onSnapshot(q, snapshot => {
-      poemsList.innerHTML = '';
-      snapshot.forEach(docSnap => {
-        const poem = docSnap.data();
-        poemsList.innerHTML += `
-          <div class="poem">
-            <div class="poem-title">${poem.title}</div>
-            <div class="poem-text">${poem.content.replace(/\n/g, '<br>')}</div>
-            <button onclick="editPoem('${docSnap.id}', \`${poem.title}\`, \`${poem.content}\`)">Edit</button>
-            <button onclick="deletePoem('${docSnap.id}')">Delete</button>
-          </div>
-        `;
-      });
+    querySnapshot.forEach(doc => {
+        const poem = doc.data();
+        const div = document.createElement("div");
+        div.innerHTML = `<h3>${poem.title}</h3><p>${poem.content}</p>`;
+        poemsContainer.appendChild(div);
     });
-  }
+}
 
-  // Global edit/delete functions
-  window.editPoem = (id, title, content) => {
-    titleInput.value = title;
-    contentInput.value = content;
-    editingId = id;
-  };
-
-  window.deletePoem = async (id) => {
-    await deleteDoc(doc(db, "poems", id));
-  };
+document.getElementById("logoutBtn").addEventListener("click", async () => {
+    await signOut(auth);
+    window.location.href = "index.html";
+});
 </script>
 
 </body>
