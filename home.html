@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>My Poems</title>
+<style>
+    body { font-family: Georgia, serif; background: #faf3e0; padding: 20px; max-width: 800px; margin: auto; }
+    h1 { text-align: center; }
+    .poem { background: white; padding: 15px; margin-bottom: 20px; border-radius: 10px; }
+    .poem-title { font-weight: bold; font-size: 1.2em; margin-bottom: 5px; }
+    textarea, input { width: 100%; padding: 8px; margin: 5px 0; }
+    button { padding: 10px; margin-top: 5px; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<h1>My Poems</h1>
+
+<!-- Poem Editor -->
+<div id="poemEditor">
+    <h3>Add / Edit Poem</h3>
+    <input id="title" placeholder="Poem Title">
+    <textarea id="content" rows="4" placeholder="Write your poem..."></textarea>
+    <button id="saveBtn">Save Poem</button>
+    <button id="logoutBtn">Logout</button>
+</div>
+
+<!-- Poems List -->
+<div id="poemsList"></div>
+
+<script type="module">
+  // Firebase imports
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-app.js";
+  import { getAuth, signOut, onAuthStateChanged } 
+    from "https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js";
+  import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, orderBy, query, serverTimestamp } 
+    from "https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js";
+
+  // Firebase Config
+  const firebaseConfig = {
+    apiKey: "AIzaSyAitTeXucaql6jlp5K8OWFqioDc7v2wi48",
+    authDomain: "notes-f5ef8.firebaseapp.com",
+    projectId: "notes-f5ef8",
+    storageBucket: "notes-f5ef8.appspot.com",
+    messagingSenderId: "89059717516",
+    appId: "1:89059717516:web:9687b741abc3a65816a6a9",
+    measurementId: "G-9RYE98FCN5"
+  };
+
+  // Init Firebase
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  let editingId = null;
+
+  const titleInput = document.getElementById('title');
+  const contentInput = document.getElementById('content');
+  const poemsList = document.getElementById('poemsList');
+
+  // Redirect if not logged in
+  onAuthStateChanged(auth, user => {
+    if (!user) {
+      window.location.href = 'login.html';
+    } else {
+      loadPoems();
+    }
+  });
+
+  // Logout
+  document.getElementById('logoutBtn').addEventListener('click', async () => {
+    await signOut(auth);
+  });
+
+  // Save / Update poem
+  document.getElementById('saveBtn').addEventListener('click', async () => {
+    const title = titleInput.value.trim();
+    const content = contentInput.value.trim();
+    if (!title || !content) {
+      alert("Please fill in all fields.");
+      return;
+    }
+
+    try {
+      if (editingId) {
+        await updateDoc(doc(db, "poems", editingId), { title, content });
+        editingId = null;
+      } else {
+        await addDoc(collection(db, "poems"), { title, content, created: serverTimestamp() });
+      }
+      titleInput.value = '';
+      contentInput.value = '';
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+
+  // Load poems from Firestore
+  function loadPoems() {
+    const q = query(collection(db, "poems"), orderBy("created", "desc"));
+    onSnapshot(q, snapshot => {
+      poemsList.innerHTML = '';
+      snapshot.forEach(docSnap => {
+        const poem = docSnap.data();
+        poemsList.innerHTML += `
+          <div class="poem">
+            <div class="poem-title">${poem.title}</div>
+            <div class="poem-text">${poem.content.replace(/\n/g, '<br>')}</div>
+            <button onclick="editPoem('${docSnap.id}', \`${poem.title}\`, \`${poem.content}\`)">Edit</button>
+            <button onclick="deletePoem('${docSnap.id}')">Delete</button>
+          </div>
+        `;
+      });
+    });
+  }
+
+  // Global helpers for edit & delete
+  window.editPoem = (id, title, content) => {
+    titleInput.value = title;
+    contentInput.value = content;
+    editingId = id;
+  };
+
+  window.deletePoem = async (id) => {
+    await deleteDoc(doc(db, "poems", id));
+  };
+</script>
+
+</body>
+</html>
