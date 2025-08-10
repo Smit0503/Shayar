@@ -1,77 +1,31 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
   <title>Sign Up</title>
-  <style>
-    body { font-family: Arial, sans-serif; background: #f4f4f4; padding: 20px; max-width: 400px; margin: auto; }
-    h2 { text-align: center; }
-    input { width: 100%; padding: 10px; margin: 5px 0; }
-    button { width: 100%; padding: 10px; margin-top: 10px; cursor: pointer; }
-  </style>
 </head>
 <body>
-  <h2>Create Account</h2>
-  <input type="email" id="email" placeholder="Email">
-  <input type="password" id="password" placeholder="Password">
+  <h2>Sign Up</h2>
+  <input type="email" id="email" placeholder="Email"><br>
+  <input type="password" id="password" placeholder="Password"><br>
   <button id="signupBtn">Sign Up</button>
-  <button onclick="window.location.href='index.html'">Back to Login</button>
+  <p>Already have an account? <a href="login.html">Login</a></p>
 
   <script type="module">
-import { auth, db } from "./firebase-config.js";
-import { createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
-import { doc, setDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+    import { auth } from './firebase-config.js';
+    import { createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
 
-document.getElementById("signupForm").addEventListener("submit", async (e) => {
-    e.preventDefault();
+    document.getElementById("signupBtn").addEventListener("click", async () => {
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
 
-    const email = document.getElementById("email").value.trim();
-    const password = document.getElementById("password").value.trim();
-
-    // Simple email & password validation
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        alert("Please enter a valid email address.");
-        return;
-    }
-    if (password.length < 6) {
-        alert("Password must be at least 6 characters.");
-        return;
-    }
-
-    try {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
-
-        // Save extra data if needed
-        await setDoc(doc(db, "users", user.uid), {
-            email: email,
-            createdAt: new Date()
-        });
-
-        alert("Account created! Please log in.");
-        window.location.href = "index.html";
-    } catch (error) {
-        handleAuthError(error);
-    }
-});
-
-function handleAuthError(error) {
-    let message;
-    switch (error.code) {
-        case "auth/email-already-in-use":
-            message = "This email is already registered.";
-            break;
-        case "auth/invalid-email":
-            message = "Invalid email format.";
-            break;
-        case "auth/weak-password":
-            message = "Password is too weak. Please use at least 6 characters.";
-            break;
-        default:
-            message = "Something went wrong. Please try again.";
-    }
-    alert(message);
-}
-</script>
+      try {
+        await createUserWithEmailAndPassword(auth, email, password);
+        alert("Account created! Redirecting to home...");
+        window.location.href = "home.html";
+      } catch (error) {
+        alert(error.message);
+      }
+    });
+  </script>
 </body>
 </html>
