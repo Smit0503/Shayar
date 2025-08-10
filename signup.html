@@ -1,29 +1,44 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <meta charset="UTF-8">
   <title>Sign Up</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f4f4f4; padding: 20px; max-width: 400px; margin: auto; }
+    h2 { text-align: center; }
+    input { width: 100%; padding: 10px; margin: 5px 0; }
+    button { width: 100%; padding: 10px; margin-top: 10px; cursor: pointer; }
+  </style>
 </head>
 <body>
   <h2>Create Account</h2>
-  <input type="email" id="email" placeholder="Email"><br>
-  <input type="password" id="password" placeholder="Password"><br>
+  <input type="email" id="email" placeholder="Email">
+  <input type="password" id="password" placeholder="Password">
   <button id="signupBtn">Sign Up</button>
   <button onclick="window.location.href='index.html'">Back to Login</button>
 
   <script type="module">
     import { auth } from './firebase-config.js';
-    import { createUserWithEmailAndPassword } 
+    import { createUserWithEmailAndPassword, onAuthStateChanged } 
       from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
 
     document.getElementById('signupBtn').addEventListener('click', () => {
       const email = document.getElementById('email').value;
       const password = document.getElementById('password').value;
+
       createUserWithEmailAndPassword(auth, email, password)
         .then(() => {
           alert("Account created! You can log in now.");
           window.location.href = 'index.html';
         })
         .catch(err => alert(err.message));
+    });
+
+    // Redirect if already logged in
+    onAuthStateChanged(auth, user => {
+      if (user) {
+        window.location.href = 'home.html';
+      }
     });
   </script>
 </body>
