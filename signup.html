@@ -18,28 +18,60 @@
   <button onclick="window.location.href='index.html'">Back to Login</button>
 
   <script type="module">
-    import { auth } from './firebase-config.js';
-    import { createUserWithEmailAndPassword, onAuthStateChanged } 
-      from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+import { auth, db } from "./firebase-config.js";
+import { createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+import { doc, setDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
-    document.getElementById('signupBtn').addEventListener('click', () => {
-      const email = document.getElementById('email').value;
-      const password = document.getElementById('password').value;
+document.getElementById("signupForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
 
-      createUserWithEmailAndPassword(auth, email, password)
-        .then(() => {
-          alert("Account created! You can log in now.");
-          window.location.href = 'index.html';
-        })
-        .catch(err => alert(err.message));
-    });
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value.trim();
 
-    // Redirect if already logged in
-    onAuthStateChanged(auth, user => {
-      if (user) {
-        window.location.href = 'home.html';
-      }
-    });
-  </script>
+    // Simple email & password validation
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        alert("Please enter a valid email address.");
+        return;
+    }
+    if (password.length < 6) {
+        alert("Password must be at least 6 characters.");
+        return;
+    }
+
+    try {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+
+        // Save extra data if needed
+        await setDoc(doc(db, "users", user.uid), {
+            email: email,
+            createdAt: new Date()
+        });
+
+        alert("Account created! Please log in.");
+        window.location.href = "index.html";
+    } catch (error) {
+        handleAuthError(error);
+    }
+});
+
+function handleAuthError(error) {
+    let message;
+    switch (error.code) {
+        case "auth/email-already-in-use":
+            message = "This email is already registered.";
+            break;
+        case "auth/invalid-email":
+            message = "Invalid email format.";
+            break;
+        case "auth/weak-password":
+            message = "Password is too weak. Please use at least 6 characters.";
+            break;
+        default:
+            message = "Something went wrong. Please try again.";
+    }
+    alert(message);
+}
+</script>
 </body>
 </html>
