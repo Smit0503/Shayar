@@ -1,43 +1,87 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <meta charset="UTF-8">
   <title>Home</title>
 </head>
 <body>
-  <h2>Welcome</h2>
+  <p id="user-info"></p>
+  <h1>Welcome</h1>
   <button id="logoutBtn">Logout</button>
-  <div id="poemsList"></div>
+
+  <hr>
+
+  <!-- Add Poem Section -->
+  <h2>Add a Poem</h2>
+  <input type="text" id="poem-title" placeholder="Poem Title" required><br>
+  <textarea id="poem-content" placeholder="Your poem..." required></textarea><br>
+  <button id="add-poem-btn">Add Poem</button>
+
+  <hr>
+
+  <!-- Poem List -->
+  <h2>Existing Poems</h2>
+  <ul id="poem-list"></ul>
 
   <script type="module">
     import { auth, db } from './firebase-config.js';
     import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
-    import { collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+    import { collection, addDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
-    onAuthStateChanged(auth, async (user) => {
-      if (!user) {
+    const userInfo = document.getElementById("user-info");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const addPoemBtn = document.getElementById("add-poem-btn");
+    const poemList = document.getElementById("poem-list");
+
+    let poemsRef;
+
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        userInfo.textContent = `Logged in as: ${user.email}`;
+        poemsRef = collection(db, "poems");
+
+        // Real-time listener
+        const q = query(poemsRef, orderBy("createdAt", "desc"));
+        onSnapshot(q, (snapshot) => {
+          poemList.innerHTML = "";
+          snapshot.forEach((doc) => {
+            const poem = doc.data();
+            const li = document.createElement("li");
+            li.innerHTML = `<strong>${poem.title}</strong><br>${poem.content}`;
+            poemList.appendChild(li);
+          });
+        });
+      } else {
         window.location.href = "index.html";
+      }
+    });
+
+    addPoemBtn.addEventListener("click", async () => {
+      const title = document.getElementById("poem-title").value.trim();
+      const content = document.getElementById("poem-content").value.trim();
+
+      if (!title || !content) {
+        alert("Please enter both title and content.");
         return;
       }
 
-      document.body.insertAdjacentHTML('afterbegin', `<p>Logged in as: ${user.email}</p>`);
-
-      // Fetch poems belonging to this user
-      const poemsRef = collection(db, "poems");
-      const q = query(poemsRef, where("userId", "==", user.uid));
-      const snapshot = await getDocs(q);
-
-      const listDiv = document.getElementById("poemsList");
-      listDiv.innerHTML = "";
-      snapshot.forEach(doc => {
-        const data = doc.data();
-        listDiv.innerHTML += `<p><strong>${data.title}</strong>: ${data.content}</p>`;
-      });
+      try {
+        await addDoc(poemsRef, {
+          title,
+          content,
+          createdAt: new Date(),
+          userId: auth.currentUser.uid
+        });
+        document.getElementById("poem-title").value = "";
+        document.getElementById("poem-content").value = "";
+      } catch (err) {
+        alert("Error adding poem: " + err.message);
+      }
     });
 
-    document.getElementById("logoutBtn").addEventListener("click", () => {
-      signOut(auth).then(() => {
-        window.location.href = "index.html";
-      });
+    logoutBtn.addEventListener("click", async () => {
+      await signOut(auth);
+      window.location.href = "index.html";
     });
   </script>
 </body>
