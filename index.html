@@ -1,134 +1,36 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>Shayar</title>
+  <title>Login</title>
 </head>
 <body>
-  <h1>📜 My Shayari</h1>
-
-  <!-- Auth Section -->
-  <input type="email" id="email" placeholder="Email">
-  <input type="password" id="password" placeholder="Password">
-  <button onclick="signup()">Sign Up</button>
-  <button onclick="login()">Login</button>
-  <button onclick="signout()">Sign Out</button>
-
-  <hr>
-
-  <!-- Poem Section -->
-  <textarea id="poemText" placeholder="Write your poem here..."></textarea>
-  <button onclick="savePoem()">Save Note</button>
-
-  <h2>My Notes</h2>
-  <ul id="poemsList"></ul>
+  <h2>Login</h2>
+  <input type="email" id="email" placeholder="Email"><br>
+  <input type="password" id="password" placeholder="Password"><br>
+  <button id="loginBtn">Login</button>
+  <button onclick="window.location.href='signup.html'">Sign Up</button>
 
   <script type="module">
-    // Firebase Imports
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
-    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } 
-      from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
-    import { getFirestore, collection, addDoc, getDocs, query, where } 
-      from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+    import { auth } from './firebase-config.js';
+    import { signInWithEmailAndPassword, onAuthStateChanged } 
+      from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
 
-    // Your Firebase Config
-    const firebaseConfig = {
-      apiKey: "AIzaSyAitTeXucaql6jlp5K8OWFqioDc7v2wi48",
-      authDomain: "notes-f5ef8.firebaseapp.com",
-      projectId: "notes-f5ef8",
-      storageBucket: "notes-f5ef8.appspot.com",
-      messagingSenderId: "89059717516",
-      appId: "1:89059717516:web:9687b741abc3a65816a6a9",
-      measurementId: "G-9RYE98FCN5"
-    };
-
-    // Initialize Firebase
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-
-    // Signup
-    async function signup() {
+    document.getElementById('loginBtn').addEventListener('click', () => {
       const email = document.getElementById('email').value;
       const password = document.getElementById('password').value;
-      try {
-        await createUserWithEmailAndPassword(auth, email, password);
-        alert("Signed up successfully!");
-      } catch (error) {
-        alert(error.message);
-      }
-    }
-
-    // Login
-    async function login() {
-      const email = document.getElementById('email').value;
-      const password = document.getElementById('password').value;
-      try {
-        await signInWithEmailAndPassword(auth, email, password);
-        alert("Logged in!");
-      } catch (error) {
-        alert(error.message);
-      }
-    }
-
-    // Sign Out
-    async function signout() {
-      await signOut(auth);
-      alert("Signed out");
-      document.getElementById('poemsList').innerHTML = '';
-    }
-
-    // Save Poem
-    async function savePoem() {
-      const text = document.getElementById('poemText').value;
-      const user = auth.currentUser;
-      if (!user) {
-        alert("Please log in first!");
-        return;
-      }
-      try {
-        await addDoc(collection(db, "poems"), {
-          uid: user.uid,
-          text: text,
-          date: new Date()
-        });
-        document.getElementById('poemText').value = '';
-        loadPoems();
-      } catch (error) {
-        alert(error.message);
-      }
-    }
-
-    // Load Poems for Current User
-    async function loadPoems() {
-      const user = auth.currentUser;
-      if (!user) return;
-      const poemsRef = collection(db, "poems");
-      const q = query(poemsRef, where("uid", "==", user.uid));
-      const querySnapshot = await getDocs(q);
-      const list = document.getElementById('poemsList');
-      list.innerHTML = '';
-      querySnapshot.forEach(doc => {
-        const li = document.createElement('li');
-        li.textContent = doc.data().text;
-        list.appendChild(li);
-      });
-    }
-
-    // Auth State Listener
-    onAuthStateChanged(auth, (user) => {
-      if (user) {
-        loadPoems();
-      } else {
-        document.getElementById('poemsList').innerHTML = '';
-      }
+      signInWithEmailAndPassword(auth, email, password)
+        .then(() => {
+          window.location.href = 'home.html';
+        })
+        .catch(err => alert(err.message));
     });
 
-    // Expose to HTML
-    window.signup = signup;
-    window.login = login;
-    window.signout = signout;
-    window.savePoem = savePoem;
+    // Redirect if already logged in
+    onAuthStateChanged(auth, user => {
+      if (user) {
+        window.location.href = 'home.html';
+      }
+    });
   </script>
 </body>
 </html>
