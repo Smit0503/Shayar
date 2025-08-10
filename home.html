@@ -43,7 +43,11 @@ onAuthStateChanged(auth, async (user) => {
 
 async function loadPoems(uid) {
     const poemsRef = collection(db, "poems");
-    const q = query(poemsRef, where("userId", "==", uid));
+    const q = query(
+    collection(db, "poems"),
+    where("userId", "==", auth.currentUser.uid)
+);
+
     const querySnapshot = await getDocs(q);
 
     const poemsContainer = document.getElementById("poemsContainer");
